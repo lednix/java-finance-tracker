@@ -11,14 +11,22 @@ import java.util.List;
 
 public class FileHandler {
 
-    // Разделяем файлы для разных сущностей
-    private final String transactionsFile = "transactions.csv";
-    private final String categoriesFile = "categories.csv";
-    private final String usersFile = "users.csv";
+    // Путь к директории или префикс для файлов
+    private final String baseFileName;
+
+    // --- ДОБАВЬ ЭТОТ КОНСТРУКТОР ---
+    public FileHandler(String baseFileName) {
+        this.baseFileName = baseFileName;
+    }
+
+    // Вспомогательный метод для генерации имен файлов
+    private String getFilePath(String type) {
+        return baseFileName + "_" + type + ".csv";
+    }
 
     // --- ЛОГИКА ДЛЯ TRANSACTION ---
     public void saveTransactions(List<Transaction> transactions) {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(transactionsFile))) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(getFilePath("transactions")))) {
             for (Transaction t : transactions) {
                 writer.println(t.getId() + "," + t.getAmount() + "," + t.getCategory() + "," + t.getDate() + "," + t.getComment());
             }
@@ -29,7 +37,7 @@ public class FileHandler {
 
     public List<Transaction> loadTransactions() {
         List<Transaction> transactions = new ArrayList<>();
-        File file = new File(transactionsFile);
+        File file = new File(getFilePath("transactions"));
         if (!file.exists()) return transactions;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -54,7 +62,7 @@ public class FileHandler {
 
     // --- ЛОГИКА ДЛЯ CATEGORY ---
     public void saveCategories(List<Category> categories) {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(categoriesFile))) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(getFilePath("categories")))) {
             for (Category c : categories) {
                 writer.println(c.getId() + "," + c.getName());
             }
@@ -65,7 +73,7 @@ public class FileHandler {
 
     public List<Category> loadCategories() {
         List<Category> categories = new ArrayList<>();
-        File file = new File(categoriesFile);
+        File file = new File(getFilePath("categories"));
         if (!file.exists()) return categories;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -84,7 +92,7 @@ public class FileHandler {
 
     // --- ЛОГИКА ДЛЯ USER ---
     public void saveUsers(List<User> users) {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(usersFile))) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(getFilePath("users")))) {
             for (User u : users) {
                 writer.println(u.getId() + "," + u.getUsername() + "," + u.getPassword());
             }
@@ -95,7 +103,7 @@ public class FileHandler {
 
     public List<User> loadUsers() {
         List<User> users = new ArrayList<>();
-        File file = new File(usersFile);
+        File file = new File(getFilePath("users"));
         if (!file.exists()) return users;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {

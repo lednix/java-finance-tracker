@@ -6,6 +6,7 @@ import com.fintrack.backend.repository.FileHandler;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.time.LocalDate;
 
 public class FinanceService {
     private List<Transaction> transactions;
@@ -54,6 +55,17 @@ public class FinanceService {
                 .collect(Collectors.groupingBy(
                         Transaction::getCategory,
                         Collectors.summingDouble(t -> Math.abs(t.getAmount())) // Суммируем модули
-                ));
+                )); // !!! СКОБКА ЗА КЛАССИФИКАТОРОМ !!!
+    } // !!! ВОТ ЭТА СКОБКА ЗАКРЫВАЕТ МЕТОД getExpensesByCategory !!!
+
+    public boolean isLimitExceeded(double monthlyLimit) {
+        double currentMonthExpenses = transactions.stream()
+                .filter(t -> t.getAmount() < 0) // Только расходы
+                .filter(t -> t.getDate().getMonth() == LocalDate.now().getMonth() &&
+                             t.getDate().getYear() == LocalDate.now().getYear()) // Только текущий месяц/год
+                .mapToDouble(t -> Math.abs(t.getAmount()))
+                .sum();
+
+        return currentMonthExpenses > monthlyLimit;
     }
 }
