@@ -30,7 +30,7 @@ bin/
 .settings/
 *.launch
 
-#    OS Files
+# OS Files
 .DS_Store
 Thumbs.db
 desktop.ini
