@@ -1,6 +1,7 @@
 package com.fintrack.backend.repository;
 
 import com.fintrack.backend.model.Category;
+import com.fintrack.backend.model.Currency;
 import com.fintrack.backend.model.Transaction;
 import com.fintrack.backend.model.User;
 
@@ -11,24 +12,25 @@ import java.util.List;
 
 public class FileHandler {
 
-    // Путь к директории или префикс для файлов
     private final String baseFileName;
 
-    // --- ДОБАВЬ ЭТОТ КОНСТРУКТОР ---
     public FileHandler(String baseFileName) {
         this.baseFileName = baseFileName;
     }
 
-    // Вспомогательный метод для генерации имен файлов
     private String getFilePath(String type) {
         return baseFileName + "_" + type + ".csv";
     }
 
-    // --- ЛОГИКА ДЛЯ TRANSACTION ---
     public void saveTransactions(List<Transaction> transactions) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(getFilePath("transactions")))) {
             for (Transaction t : transactions) {
-                writer.println(t.getId() + "," + t.getAmount() + "," + t.getCategory() + "," + t.getDate() + "," + t.getComment());
+                writer.println(t.getId() + "," + 
+                               t.getAmount() + "," + 
+                               t.getCategory() + "," + 
+                               t.getDate() + "," + 
+                               t.getComment() + "," + 
+                               t.getCurrency().name());
             }
         } catch (IOException e) {
             System.err.println("Ошибка при сохранении транзакций: " + e.getMessage());
@@ -44,13 +46,15 @@ public class FileHandler {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length == 5) {
+                // Проверяем на 6 полей (добавилась валюта)
+                if (parts.length == 6) {
                     transactions.add(new Transaction(
                             Long.parseLong(parts[0]),
                             Double.parseDouble(parts[1]),
                             parts[2],
                             LocalDate.parse(parts[3]),
-                            parts[4]
+                            parts[4],
+                            Currency.valueOf(parts[5]) // Конвертируем строку назад в Enum
                     ));
                 }
             }
@@ -60,7 +64,6 @@ public class FileHandler {
         return transactions;
     }
 
-    // --- ЛОГИКА ДЛЯ CATEGORY ---
     public void saveCategories(List<Category> categories) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(getFilePath("categories")))) {
             for (Category c : categories) {
@@ -90,7 +93,6 @@ public class FileHandler {
         return categories;
     }
 
-    // --- ЛОГИКА ДЛЯ USER ---
     public void saveUsers(List<User> users) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(getFilePath("users")))) {
             for (User u : users) {
