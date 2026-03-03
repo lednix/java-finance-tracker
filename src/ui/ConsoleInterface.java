@@ -88,39 +88,49 @@ public class ConsoleInterface {
     }
 
     private static void addTransaction(boolean isIncome) {
-        try {
-            System.out.print("Сумма: ");
-            double amount = Double.parseDouble(scanner.nextLine());
-            
-            System.out.print("Валюта (1-RUB, 2-USD, 3-EUR): ");
-            String currChoice = scanner.nextLine();
-            Currency currency = switch(currChoice) {
-                case "2" -> Currency.USD;
-                case "3" -> Currency.EUR;
-                default -> Currency.RUB;
-            };
+      try {
+        System.out.print("Сумма: ");
+        double amount = Double.parseDouble(scanner.nextLine());
+        
+        System.out.print("Валюта (1-RUB, 2-USD, 3-EUR): ");
+        String currChoice = scanner.nextLine();
+        Currency currency = switch(currChoice) {
+            case "2" -> Currency.USD;
+            case "3" -> Currency.EUR;
+            default -> Currency.RUB;
+        };
 
-            System.out.print("Категория: ");
-            String category = scanner.nextLine();
+        double amountInRub = currencyService.convertToBase(amount, currency);
+        double currentBalance = service.calculateBalance();
 
-            long id = Long.parseLong(String.valueOf(System.currentTimeMillis()).substring(9));
-            double finalAmount = isIncome ? Math.abs(amount) : -Math.abs(amount);
-            
-            Transaction t = new Transaction(id, finalAmount, category, LocalDate.now(), "", currency);
-            service.addTransaction(t);
-            
-            System.out.println("Успешно добавлено! ID: " + id);
+          if (!isIncome && amountInRub > currentBalance) {
+              System.out.println("\n[ОШИБКА] Недостаточно средств на балансе!");
+              System.out.printf("Доступно: %.2f руб. | Требуется: %.2f руб.\n", currentBalance, amountInRub);
+              waitEnter();
+              return; // Прерываем метод, транзакция не добавится
+          }
 
-            // Проверка лимита
-            if (!isIncome && service.isLimitExceeded(monthlyLimit)) {
-                System.out.println("\n[!!!] ВНИМАНИЕ: Лимит превышен!");
-            }
+          System.out.print("Категория: ");
+          String category = scanner.nextLine();
 
-            waitEnter();
-        } catch (Exception e) {
-            System.out.println("Ошибка ввода.");
-            waitEnter();
-        }
+          long id = Long.parseLong(String.valueOf(System.currentTimeMillis()).substring(9));
+          double finalAmount = isIncome ? Math.abs(amount) : -Math.abs(amount);
+        
+          Transaction t = new Transaction(id, finalAmount, category, LocalDate.now(), "", currency);
+          service.addTransaction(t);
+        
+          System.out.println("Успешно добавлено! ID: " + id);
+
+          // Предупреждение о лимите (бюджете) остается
+          if (!isIncome && service.isLimitExceeded(monthlyLimit)) {
+              System.out.println("\n[!!!] ВНИМАНИЕ: Месячный лимит трат превышен!");
+          }
+
+          waitEnter();
+      } catch (Exception e) {
+          System.out.println("Ошибка ввода.");
+          waitEnter();
+      }
     }
 
     private static void showHistory() {
