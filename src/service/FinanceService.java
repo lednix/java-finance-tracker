@@ -21,10 +21,10 @@ public class FinanceService {
     // Добавление транзакции
     public void addTransaction(Transaction transaction) {
         transactions.add(transaction);
-        fileHandler.saveTransactions(transactions); // Сразу сохраняем в файл чтобы потом не было мороки
+        fileHandler.saveTransactions(transactions); // Сразу сохраняем в файл
     }
 
-    // Удаление транзакции при необходимости
+    // Удаление транзакции
     public boolean deleteTransaction(Long id) {
         boolean removed = transactions.removeIf(t -> t.getId().equals(id));
         if (removed) {
@@ -38,10 +38,7 @@ public class FinanceService {
         return transactions;
     }
 
-    // аналитика чтоб не заморачиваться
-
-    // Подсчет общего баланса (Доходы - Расходы)
-    // Примечание: сумма < 0 считается расходом
+    // Подсчет общего баланса
     public double calculateBalance() {
         return transactions.stream()
                 .mapToDouble(Transaction::getAmount)
@@ -51,18 +48,28 @@ public class FinanceService {
     // Группировка расходов по категориям
     public Map<String, Double> getExpensesByCategory() {
         return transactions.stream()
-                .filter(t -> t.getAmount() < 0) // Берем только расходы
+                .filter(t -> t.getAmount() < 0) 
                 .collect(Collectors.groupingBy(
                         Transaction::getCategory,
-                        Collectors.summingDouble(t -> Math.abs(t.getAmount())) // Суммируем модули
-                )); // !!! СКОБКА ЗА КЛАССИФИКАТОРОМ !!!
-    } // !!! ВОТ ЭТА СКОБКА ЗАКРЫВАЕТ МЕТОД getExpensesByCategory !!!
+                        Collectors.summingDouble(t -> Math.abs(t.getAmount()))
+                ));
+    }
+
+    // Новый метод: группировка доходов по категориям
+    public Map<String, Double> getIncomesByCategory() {
+        return transactions.stream()
+                .filter(t -> t.getAmount() > 0) // Только положительные суммы
+                .collect(Collectors.groupingBy(
+                        Transaction::getCategory,
+                        Collectors.summingDouble(Transaction::getAmount)
+                ));
+    }
 
     public boolean isLimitExceeded(double monthlyLimit) {
         double currentMonthExpenses = transactions.stream()
-                .filter(t -> t.getAmount() < 0) // Только расходы
+                .filter(t -> t.getAmount() < 0)
                 .filter(t -> t.getDate().getMonth() == LocalDate.now().getMonth() &&
-                             t.getDate().getYear() == LocalDate.now().getYear()) // Только текущий месяц/год
+                             t.getDate().getYear() == LocalDate.now().getYear())
                 .mapToDouble(t -> Math.abs(t.getAmount()))
                 .sum();
 
