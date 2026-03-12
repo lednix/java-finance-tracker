@@ -5,6 +5,7 @@ import com.fintrack.backend.model.Transaction;
 import com.fintrack.backend.repository.FileHandler;
 import com.fintrack.backend.service.CurrencyService;
 import com.fintrack.backend.service.FinanceService;
+import com.fintrack.backend.service.ExportService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ public class ConsoleInterface {
     private static final Scanner scanner = new Scanner(System.in, "UTF-8");
     private static FinanceService service;
     private static CurrencyService currencyService;
+    private static ExportService exportService;
     private static double monthlyLimit = 10000.0;
 
     public static void main(String[] args) {
@@ -26,6 +28,7 @@ public class ConsoleInterface {
         FileHandler fileHandler = new FileHandler("data");
         currencyService = new CurrencyService(); 
         service = new FinanceService(fileHandler, currencyService);
+        exportService = new ExportService();
 
         while (true) {
             clearConsole();
@@ -41,6 +44,10 @@ public class ConsoleInterface {
                 case "6" -> deleteTransaction();
                 case "7" -> setLimit();
                 case "8" -> { System.out.println("Выход..."); return; }
+                case "9" -> { 
+                  exportService.exportToHtml(service.getAllTransactions(), service.calculateBalance()); 
+                  waitEnter(); 
+                }
                 default -> { System.out.println("Ошибка выбора."); waitEnter(); }
             }
         }
@@ -69,68 +76,85 @@ public class ConsoleInterface {
         
         double remaining = monthlyLimit - spent;
 
-        System.out.println("=== FinTrack CLI ===");
+        System.out.println(Colors.CYAN + "=== FinTrack CLI ===" + Colors.RESET);
         System.out.println("1. Добавить доход");
         System.out.println("2. Добавить расход");
         System.out.println("3. Баланс (в RUB)");
         System.out.println("4. Аналитика");
         System.out.println("5. История");
         System.out.println("6. Удалить транзакцию");
-        
+       
         if (remaining < 0) {
-            System.out.printf("7. Лимит (Траты: %.2f | ПЕРЕРАСХОД: %.2f !!!)\n", spent, Math.abs(remaining));
+          System.out.printf("7. Лимит (Траты: %.2f | " + Colors.RED + "ПЕРЕРАСХОД: %.2f !!!" + Colors.RESET + ")\n", 
+            spent, Math.abs(remaining));
         } else {
-            System.out.printf("7. Лимит (Траты: %.2f | Остаток: %.2f)\n", spent, remaining);
+          System.out.printf("7. Лимит (Траты: %.2f | " + Colors.GREEN + "Остаток: %.2f" + Colors.RESET + ")\n", 
+            spent, remaining);
         }
-        
+
         System.out.println("8. Выход");
+        System.out.println("9. Создание HTML");
         System.out.print("\nВыберите действие: ");
     }
 
     private static void addTransaction(boolean isIncome) {
-        try {
-            System.out.print("Сумма: ");
-            double amount = Double.parseDouble(scanner.nextLine());
-            
-            System.out.print("Валюта (1-RUB, 2-USD, 3-EUR): ");
-            String currChoice = scanner.nextLine();
-            Currency currency = switch(currChoice) {
-                case "2" -> Currency.USD;
-                case "3" -> Currency.EUR;
-                default -> Currency.RUB;
-            };
+      try {
+        System.out.print("Сумма: ");
+        double amount = Double.parseDouble(scanner.nextLine());
+        
+        System.out.print("Валюта (1-RUB, 2-USD, 3-EUR): ");
+        String currChoice = scanner.nextLine();
+        Currency currency = switch(currChoice) {
+            case "2" -> Currency.USD;
+            case "3" -> Currency.EUR;
+            default -> Currency.RUB;
+        };
 
-            System.out.print("Категория: ");
-            String category = scanner.nextLine();
+        double amountInRub = currencyService.convertToBase(amount, currency);
+        double currentBalance = service.calculateBalance();
 
-            long id = Long.parseLong(String.valueOf(System.currentTimeMillis()).substring(9));
-            double finalAmount = isIncome ? Math.abs(amount) : -Math.abs(amount);
-            
-            Transaction t = new Transaction(id, finalAmount, category, LocalDate.now(), "", currency);
-            service.addTransaction(t);
-            
-            System.out.println("Успешно добавлено! ID: " + id);
+          if (!isIncome && amountInRub > currentBalance) {
+              System.out.println("\n[ОШИБКА] Недостаточно средств на балансе!");
+              System.out.printf("Доступно: %.2f руб. | Требуется: %.2f руб.\n", currentBalance, amountInRub);
+              waitEnter();
+              return; // Прерываем метод, транзакция не добавится
+          }
 
-            // Проверка лимита
-            if (!isIncome && service.isLimitExceeded(monthlyLimit)) {
-                System.out.println("\n[!!!] ВНИМАНИЕ: Лимит превышен!");
-            }
+          System.out.print("Категория: ");
+          String category = scanner.nextLine();
 
-            waitEnter();
-        } catch (Exception e) {
-            System.out.println("Ошибка ввода.");
-            waitEnter();
-        }
+          long id = Long.parseLong(String.valueOf(System.currentTimeMillis()).substring(9));
+          double finalAmount = isIncome ? Math.abs(amount) : -Math.abs(amount);
+        
+          Transaction t = new Transaction(id, finalAmount, category, LocalDate.now(), "", currency);
+          service.addTransaction(t);
+        
+          System.out.println("Успешно добавлено! ID: " + id);
+
+          // Предупреждение о лимите (бюджете) остается
+          if (!isIncome && service.isLimitExceeded(monthlyLimit)) {
+            System.out.println(Colors.RED + Colors.BOLD + "[!!!] ВНИМАНИЕ: Лимит превышен!" + Colors.RESET);
+          }
+
+          waitEnter();
+      } catch (Exception e) {
+          System.out.println("Ошибка ввода.");
+          waitEnter();
+      }
     }
 
+
     private static void showHistory() {
-        System.out.println("\n--- ИСТОРИЯ ---");
-        System.out.printf("%-6s | %-12s | %-12s | %-5s\n", "ID", "Сумма", "Категория", "Вал.");
-        System.out.println("----------------------------------------------");
-        for (Transaction t : service.getAllTransactions()) {
-            System.out.printf("%-6d | %-12.2f | %-12s | %-5s\n", 
-                t.getId(), t.getAmount(), t.getCategory(), t.getCurrency());
-        }
+      System.out.println(Colors.BLUE + "\n--- ИСТОРИЯ ---" + Colors.RESET);
+      System.out.printf(Colors.BOLD + "%-6s | %-12s | %-12s | %-5s\n" + Colors.RESET, "ID", "Сумма", "Категория", "Вал.");
+      System.out.println("----------------------------------------------");
+      for (Transaction t : service.getAllTransactions()) {
+        // Выбираем цвет в зависимости от суммы
+          String amountColor = t.getAmount() < 0 ? Colors.RED : Colors.GREEN;
+        
+          System.out.printf(Colors.PURPLE + "%-6d" + Colors.RESET + " | " + amountColor + "%-12.2f" + Colors.RESET + " | %-12s | %-5s\n", 
+              t.getId(), t.getAmount(), t.getCategory(), t.getCurrency());
+      }
     }
 
     private static void showAnalytics() {
