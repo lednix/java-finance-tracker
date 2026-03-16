@@ -172,7 +172,7 @@ public class ConsoleInterface {
         double max = data.values().stream().map(Math::abs).max(Double::compare).orElse(1.0);
         data.forEach((cat, val) -> {
             int bars = (int) (Math.abs(val) / max * 10);
-            String chart = "#".repeat(bars) + " ".repeat(10 - bars);
+            String chart = "█".repeat(bars) + " ".repeat(10 - bars);
             System.out.printf("%-10s | %s (%.2f руб.)\n", cat, chart, Math.abs(val));
         });
     }
