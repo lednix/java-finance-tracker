@@ -26,6 +26,12 @@ expense analytics, and budget control.
 - **Архитектура:** Модульная (Separation of Concerns)
 - **Хранение данных:** Работа с файловой системой (I/O)
 - **Управление версиями:** Git + GitHub
+- для компиляции программы необходимо ввести следующую команду
+  версия под macOS: " javac -d . $(find src -name "*.java") "
+  версия под Windows " javac -d . (Get-ChildItem -Path src -Filter *.java -Recurse).FullName "
+- для запуска проекта необходимо ввести следующую команду
+  версия под macOS: " java com.fintrack.backend.ui.ConsoleInterface "
+  версия под Windows: " $javaNew = (Get-Command javac.exe).Source.Replace("javac.exe", "java.exe"); & $javaNew com.fintrack.backend.ui.ConsoleInterface " 
 
 ## Команда проекта
 - **[Муслим Г.З]** - Back-end: разработка бизнес-логики, работа с данными, хранение и аналитика.
